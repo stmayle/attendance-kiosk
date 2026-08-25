@@ -83,7 +83,6 @@
       id="username"
       placeholder="NEIU username"
       autocapitalize="none"
-      autocomplete="username"
     >
 
     <br>
@@ -112,160 +111,74 @@
 
 <script>
 
-  // ==================================================
-  // APPS SCRIPT WEB APP URL
-  // ==================================================
+  /*
+    REPLACE ONLY THE TEXT BETWEEN THE QUOTES
+    WITH YOUR APPS SCRIPT /exec URL
+  */
 
-  const SCRIPT_URL =
-    https://script.google.com/macros/s/AKfycbx0vez2vcT7vBRxCWDIU6wOBnFyY9vSE5xjOhZMyRlvthfDKGOTBfzoAN7rWIewN4MQ/exec
-
-
-  // ==================================================
-  // DEVICE ID
-  // ==================================================
-
-  function getDeviceId() {
-
-    let deviceId =
-      localStorage.getItem(
-        "attendanceDeviceId"
-      );
-
-    if (!deviceId) {
-
-      if (
-        window.crypto &&
-        crypto.randomUUID
-      ) {
-
-        deviceId =
-          "device-" +
-          crypto.randomUUID();
-
-      } else {
-
-        deviceId =
-          "device-" +
-          Date.now() +
-          "-" +
-          Math.random()
-            .toString(36)
-            .substring(2, 12);
-      }
-
-      localStorage.setItem(
-        "attendanceDeviceId",
-        deviceId
-      );
-    }
-
-    return deviceId;
-  }
+  var SCRIPT_URL =
+    "https://script.google.com/macros/s/AKfycbx0vez2vcT7vBRxCWDIU6wOBnFyY9vSE5xjOhZMyRlvthfDKGOTBfzoAN7rWIewN4MQ/exec";
 
 
-  // ==================================================
-  // USERNAME
-  // ==================================================
-
-  let currentUsername = "";
-
-  const savedUsername =
-    localStorage.getItem(
-      "attendanceUsername"
-    );
-
-  if (savedUsername) {
-
-    document
-      .getElementById("username")
-      .value =
-      savedUsername;
-  }
-
-
-  // ==================================================
-  // CONTINUE BUTTON
-  // ==================================================
-
-  let scannerStarted = false;
+  var currentUsername = "";
+  var scannerStarted = false;
+  var submissionLocked = false;
 
 
   document
     .getElementById("continueButton")
-    .addEventListener(
-      "click",
-      function() {
+    .onclick = function() {
 
-        const username =
-          document
-            .getElementById("username")
-            .value
-            .trim()
-            .toLowerCase();
-
-        if (!username) {
-
-          alert(
-            "Please enter your username."
-          );
-
-          return;
-        }
-
-
-        currentUsername =
-          username;
-
-
-        localStorage.setItem(
-          "attendanceUsername",
-          username
-        );
-
-
+      var username =
         document
-          .getElementById("usernameSection")
-          .style.display =
-          "none";
+          .getElementById("username")
+          .value
+          .trim()
+          .toLowerCase();
 
 
-        document
-          .getElementById("scannerSection")
-          .style.display =
-          "block";
+      if (username === "") {
 
+        alert("Please enter your username.");
 
-        if (!scannerStarted) {
-
-          scannerStarted = true;
-
-          startScanner();
-        }
+        return;
       }
-    );
 
 
-  // ==================================================
-  // QR SCANNER
-  // ==================================================
+      currentUsername = username;
 
-  let submissionLocked = false;
+
+      document
+        .getElementById("usernameSection")
+        .style.display = "none";
+
+
+      document
+        .getElementById("scannerSection")
+        .style.display = "block";
+
+
+      if (!scannerStarted) {
+
+        scannerStarted = true;
+
+        startScanner();
+      }
+    };
 
 
   function startScanner() {
 
 
-    function onScanSuccess(
-      decodedText
-    ) {
+    function onScanSuccess(decodedText) {
+
 
       if (submissionLocked) {
         return;
       }
 
 
-      submissionLocked =
-        true;
+      submissionLocked = true;
 
 
       document
@@ -276,23 +189,21 @@
         "\nSubmitting attendance...";
 
 
-      submitAttendance(
+      sendAttendance(
         currentUsername,
-        decodedText.trim()
+        decodedText
       );
     }
 
 
-    function onScanFailure(
-      error
-    ) {
+    function onScanFailure(error) {
 
-      // Normal scan failures are ignored.
+      // Normal failed scans are ignored.
 
     }
 
 
-    const scanner =
+    var scanner =
       new Html5QrcodeScanner(
 
         "reader",
@@ -306,8 +217,7 @@
             height: 250
           },
 
-          rememberLastUsedCamera:
-            true
+          rememberLastUsedCamera: true
 
         },
 
@@ -322,60 +232,27 @@
   }
 
 
-  // ==================================================
-  // SEND ATTENDANCE USING JSONP
-  // ==================================================
-
-  function submitAttendance(
+  function sendAttendance(
     username,
     sessionId
   ) {
 
 
-    const callbackName =
-      "attendanceCallback_" +
-      Date.now();
-
-
-    const params =
-      new URLSearchParams({
-
-        username:
-          username,
-
-        sessionId:
-          sessionId,
-
-        deviceId:
-          getDeviceId(),
-
-        userAgent:
-          navigator.userAgent,
-
-        callback:
-          callbackName
-      });
-
-
-    const script =
-      document.createElement(
-        "script"
-      );
+    var callbackName =
+      "attendanceCallback" +
+      new Date().getTime();
 
 
     window[callbackName] =
       function(result) {
 
 
-        const resultBox =
-          document
-            .getElementById("result");
-
-
         if (result.success) {
 
-          resultBox.innerText =
-            "✓ Attendance Recorded\n" +
+          document
+            .getElementById("result")
+            .innerText =
+            "Attendance Recorded\n" +
             result.firstName +
             " " +
             result.lastName +
@@ -384,64 +261,53 @@
 
         } else {
 
-          resultBox.innerText =
-            "✗ " +
+          document
+            .getElementById("result")
+            .innerText =
+            "Attendance not recorded\n" +
             result.status;
         }
 
 
-        delete window[
-          callbackName
-        ];
+        submissionLocked = false;
 
-        script.remove();
+        delete window[callbackName];
 
-
-        setTimeout(
-          function() {
-
-            submissionLocked =
-              false;
-
-          },
-
-          4000
+        document.body.removeChild(
+          requestScript
         );
       };
 
 
-    script.onerror =
-      function() {
+    var requestScript =
+      document.createElement("script");
 
+
+    requestScript.src =
+      SCRIPT_URL +
+      "?username=" +
+      encodeURIComponent(username) +
+      "&sessionId=" +
+      encodeURIComponent(sessionId) +
+      "&callback=" +
+      encodeURIComponent(callbackName);
+
+
+    requestScript.onerror =
+      function() {
 
         document
           .getElementById("result")
           .innerText =
-          "Unable to contact attendance server.";
+          "Could not contact attendance server.";
 
-
-        submissionLocked =
-          false;
-
-
-        delete window[
-          callbackName
-        ];
-
-        script.remove();
+        submissionLocked = false;
       };
 
 
-    script.src =
-      SCRIPT_URL +
-      "?" +
-      params.toString();
-
-
-    document.body
-      .appendChild(
-        script
-      );
+    document.body.appendChild(
+      requestScript
+    );
   }
 
 </script>
