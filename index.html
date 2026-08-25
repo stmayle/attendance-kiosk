@@ -10,51 +10,39 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>Class Attendance</title>
+  <title>Attendance QR Test</title>
 
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
 
     body {
-      font-family: Arial, Helvetica, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: #f3f3f3;
+      font-family: Arial, sans-serif;
       text-align: center;
+      margin: 20px;
+      background: #f5f5f5;
     }
 
     .container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 30px;
+      max-width: 550px;
+      margin: auto;
       background: white;
+      padding: 25px;
       border-radius: 12px;
     }
 
-    h1 {
-      margin-top: 0;
-    }
-
     input {
-      width: 85%;
-      max-width: 350px;
-      padding: 14px;
       font-size: 20px;
+      padding: 12px;
+      width: 80%;
+      max-width: 350px;
       text-align: center;
-      box-sizing: border-box;
     }
 
     button {
+      font-size: 20px;
       padding: 14px 28px;
       margin: 15px;
-      font-size: 20px;
-      cursor: pointer;
-    }
-
-    #scannerSection {
-      display: none;
-      margin-top: 25px;
     }
 
     #reader {
@@ -63,46 +51,43 @@
       margin: 20px auto;
     }
 
-    #message {
-      margin-top: 25px;
-      font-size: 24px;
-      font-weight: bold;
-      white-space: pre-line;
+    #scannerSection {
+      display: none;
     }
 
-    .instructions {
-      color: #666;
-      font-size: 14px;
+    #result {
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 25px;
     }
 
   </style>
 
 </head>
 
+
 <body>
 
 <div class="container">
 
-  <h1>Class Attendance</h1>
+  <h1>Class Attendance Test</h1>
 
-  <div id="loginSection">
+
+  <div id="usernameSection">
 
     <h2>Enter Your Username</h2>
 
     <input
-      id="username"
       type="text"
+      id="username"
       placeholder="NEIU username"
       autocapitalize="none"
-      autocomplete="username"
     >
 
-    <p class="instructions">
-      Your username will be remembered on this device.
-    </p>
+    <br>
 
-    <button onclick="continueToScanner()">
-      Continue
+    <button id="continueButton">
+      Continue to Scanner
     </button>
 
   </div>
@@ -110,12 +95,12 @@
 
   <div id="scannerSection">
 
-    <h2>Scan Today's Class QR Code</h2>
+    <h2>Scan Today's QR Code</h2>
 
     <div id="reader"></div>
 
-    <div id="message">
-      Preparing camera...
+    <div id="result">
+      Waiting for QR code...
     </div>
 
   </div>
@@ -125,396 +110,104 @@
 
 <script>
 
-  // ==================================================
-  // GOOGLE APPS SCRIPT URL
-  // ==================================================
-
-  const SCRIPT_URL =
-    https://script.google.com/a/macros/neiu.edu/s/AKfycbx0vez2vcT7vBRxCWDIU6wOBnFyY9vSE5xjOhZMyRlvthfDKGOTBfzoAN7rWIewN4MQ/exec;
+  let scannerStarted = false;
 
 
-  // ==================================================
-  // DEVICE ID
-  // ==================================================
+  document
+    .getElementById("continueButton")
+    .addEventListener(
+      "click",
+      function() {
 
-  function getDeviceId() {
+        const username =
+          document
+            .getElementById("username")
+            .value
+            .trim();
 
-    let deviceId =
-      localStorage.getItem(
-        "attendanceDeviceId"
-      );
+        if (!username) {
 
-    if (!deviceId) {
-
-      if (
-        window.crypto &&
-        crypto.randomUUID
-      ) {
-
-        deviceId =
-          "device-" +
-          crypto.randomUUID();
-
-      } else {
-
-        deviceId =
-          "device-" +
-          Date.now() +
-          "-" +
-          Math.random()
-            .toString(36)
-            .substring(2, 12);
-      }
-
-      localStorage.setItem(
-        "attendanceDeviceId",
-        deviceId
-      );
-    }
-
-    return deviceId;
-  }
-
-
-  // ==================================================
-  // USERNAME
-  // ==================================================
-
-  function loadUsername() {
-
-    const savedUsername =
-      localStorage.getItem(
-        "attendanceUsername"
-      );
-
-    if (savedUsername) {
-
-      document
-        .getElementById("username")
-        .value =
-        savedUsername;
-    }
-  }
-
-
-  // ==================================================
-  // SCANNER
-  // ==================================================
-
-  let scanner = null;
-  let submissionLocked = false;
-
-
-  function continueToScanner() {
-
-    const username =
-      document
-        .getElementById("username")
-        .value
-        .trim()
-        .toLowerCase();
-
-    if (!username) {
-
-      alert(
-        "Please enter your username."
-      );
-
-      return;
-    }
-
-    localStorage.setItem(
-      "attendanceUsername",
-      username
-    );
-
-    document
-      .getElementById("loginSection")
-      .style.display =
-      "none";
-
-    document
-      .getElementById("scannerSection")
-      .style.display =
-      "block";
-
-    startScanner();
-  }
-
-
-  function startScanner() {
-
-    const message =
-      document
-        .getElementById("message");
-
-    message.innerText =
-      "Looking for camera...";
-
-
-    Html5Qrcode.getCameras()
-
-      .then(function(cameras) {
-
-        if (
-          !cameras ||
-          cameras.length === 0
-        ) {
-
-          message.innerText =
-            "No camera was found.";
+          alert(
+            "Please enter your username."
+          );
 
           return;
         }
 
 
-        message.innerText =
-          "Camera found. Starting scanner...";
+        document
+          .getElementById("usernameSection")
+          .style.display = "none";
 
 
-        let cameraId =
-          cameras[0].id;
+        document
+          .getElementById("scannerSection")
+          .style.display = "block";
 
 
-        /*
-          On phones, the last camera in the list
-          is often the rear-facing camera.
-        */
+        if (!scannerStarted) {
 
-        if (cameras.length > 1) {
+          scannerStarted = true;
 
-          cameraId =
-            cameras[
-              cameras.length - 1
-            ].id;
+          startScanner();
         }
+      }
+    );
 
 
-        scanner =
-          new Html5Qrcode(
-            "reader"
-          );
+  function startScanner() {
 
+    function onScanSuccess(
+      decodedText
+    ) {
 
-        return scanner.start(
-
-          cameraId,
-
-          {
-
-            fps: 10,
-
-            qrbox: {
-              width: 250,
-              height: 250
-            }
-
-          },
-
-          onScanSuccess,
-
-          onScanFailure
-
-        );
-
-      })
-
-      .then(function() {
-
-        message.innerText =
-          "Camera ready. Scan today's QR code.";
-
-      })
-
-      .catch(function(error) {
-
-        console.error(error);
-
-        message.innerText =
-          "Unable to start camera:\n" +
-          String(error);
-      });
-  }
-
-
-  function onScanFailure(error) {
-
-    // Normal failures while looking
-    // for a QR code are ignored.
-
-  }
-
-
-  // ==================================================
-  // SUCCESSFUL QR SCAN
-  // ==================================================
-
-  function onScanSuccess(
-    decodedText
-  ) {
-
-    if (submissionLocked) {
-      return;
+      document
+        .getElementById("result")
+        .innerText =
+        "QR CODE READ: " +
+        decodedText;
     }
 
-    submissionLocked = true;
+
+    function onScanFailure(
+      error
+    ) {
+
+      // Ignore normal failed scans.
+
+    }
 
 
-    document
-      .getElementById("message")
-      .innerText =
-      "QR code read.\nSubmitting attendance...";
+    const scanner =
+      new Html5QrcodeScanner(
 
+        "reader",
 
-    const username =
-      localStorage.getItem(
-        "attendanceUsername"
+        {
+
+          fps: 10,
+
+          qrbox: {
+            width: 250,
+            height: 250
+          },
+
+          rememberLastUsedCamera: true
+
+        },
+
+        false
       );
 
 
-    submitAttendance(
-      username,
-      decodedText.trim()
+    scanner.render(
+      onScanSuccess,
+      onScanFailure
     );
   }
 
-
-  // ==================================================
-  // JSONP SUBMISSION
-  // ==================================================
-
-  function submitAttendance(
-    username,
-    sessionId
-  ) {
-
-    const callbackName =
-      "attendanceCallback_" +
-      Date.now();
-
-
-    const params =
-      new URLSearchParams({
-
-        username:
-          username,
-
-        sessionId:
-          sessionId,
-
-        deviceId:
-          getDeviceId(),
-
-        userAgent:
-          navigator.userAgent,
-
-        callback:
-          callbackName
-      });
-
-
-    const script =
-      document.createElement(
-        "script"
-      );
-
-
-    window[callbackName] =
-      function(result) {
-
-        const message =
-          document
-            .getElementById("message");
-
-
-        if (result.success) {
-
-          message.innerText =
-            "✓ Attendance Recorded\n\n" +
-            result.firstName +
-            " " +
-            result.lastName +
-            "\n" +
-            result.section;
-
-
-          if (scanner) {
-
-            scanner.stop()
-              .catch(function() {});
-          }
-
-
-        } else {
-
-          message.innerText =
-            "✗ " +
-            result.status;
-
-
-          setTimeout(
-            function() {
-
-              submissionLocked =
-                false;
-
-              message.innerText =
-                "Scan today's QR code.";
-
-            },
-
-            3000
-          );
-        }
-
-
-        delete window[
-          callbackName
-        ];
-
-        script.remove();
-      };
-
-
-    script.onerror =
-      function() {
-
-        document
-          .getElementById("message")
-          .innerText =
-          "Unable to contact attendance server.";
-
-        submissionLocked =
-          false;
-
-        delete window[
-          callbackName
-        ];
-
-        script.remove();
-      };
-
-
-    script.src =
-      SCRIPT_URL +
-      "?" +
-      params.toString();
-
-
-    document.body
-      .appendChild(
-        script
-      );
-  }
-
-
-  // ==================================================
-  // PAGE STARTUP
-  // ==================================================
-
-  loadUsername();
-
 </script>
+
 
 </body>
 
