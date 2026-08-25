@@ -1,6 +1,9 @@
 <!DOCTYPE html>
+
 <html>
+
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -10,121 +13,222 @@
 
   <title>Class Attendance</title>
 
-  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <script
+    src="https://unpkg.com/html5-qrcode">
+  </script>
+
 
   <style>
+
     body {
-      font-family: Arial, sans-serif;
+
+      font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+      margin: 0;
+
+      padding: 20px;
+
+      background: #f3f3f3;
+
       text-align: center;
-      margin: 20px;
-      background: #f5f5f5;
     }
 
+
     .container {
-      max-width: 550px;
-      margin: auto;
+
+      max-width: 600px;
+
+      margin: 0 auto;
+
+      padding: 30px;
+
       background: white;
-      padding: 25px;
+
       border-radius: 12px;
     }
 
-    input {
-      font-size: 20px;
-      padding: 12px;
-      width: 80%;
-      max-width: 350px;
-      text-align: center;
+
+    h1 {
+
+      margin-top: 0;
     }
 
-    button {
+
+    input {
+
+      width: 85%;
+
+      max-width: 350px;
+
+      padding: 14px;
+
       font-size: 20px;
+
+      text-align: center;
+
+      box-sizing: border-box;
+    }
+
+
+    button {
+
       padding: 14px 28px;
-      margin: 10px;
+
+      margin: 15px;
+
+      font-size: 20px;
+
       cursor: pointer;
     }
 
+
+    #scannerSection {
+
+      display: none;
+
+      margin-top: 25px;
+    }
+
+
     #reader {
+
       width: 100%;
+
       max-width: 500px;
+
       margin: 20px auto;
     }
 
+
     #message {
-      font-size: 24px;
-      font-weight: bold;
+
       margin-top: 25px;
+
+      font-size: 24px;
+
+      font-weight: bold;
+
       white-space: pre-line;
     }
 
-    .small {
-      font-size: 14px;
+
+    .instructions {
+
       color: #666;
+
+      font-size: 14px;
     }
+
   </style>
+
 </head>
+
+
 
 <body>
 
+
 <div class="container">
 
-  <h1>Class Attendance</h1>
 
-  <h2>1. Enter Your Username</h2>
+  <h1>
+    Class Attendance
+  </h1>
 
-  <input
-    type="text"
-    id="username"
-    placeholder="NEIU username"
-    autocomplete="username"
-    autocapitalize="none"
-  >
 
-  <p class="small">
-    Your username will be remembered on this device.
-  </p>
+  <div id="loginSection">
 
-  <button onclick="startScanner()">
-    Continue to QR Scanner
-  </button>
+    <h2>
+      Enter Your Username
+    </h2>
 
-  <hr>
 
-  <h2>2. Scan Today's Class QR Code</h2>
+    <input
+      id="username"
+      type="text"
+      placeholder="NEIU username"
+      autocapitalize="none"
+      autocomplete="username"
+    >
 
-  <div id="reader"></div>
 
-  <div id="message">
-    Enter your username to begin.
+    <p class="instructions">
+      Your username will be remembered
+      on this device.
+    </p>
+
+
+    <button
+      onclick="continueToScanner()"
+    >
+      Continue
+    </button>
+
   </div>
+
+
+
+  <div id="scannerSection">
+
+    <h2>
+      Scan Today's Class QR Code
+    </h2>
+
+
+    <div id="reader"></div>
+
+
+    <div id="message">
+      Camera ready.
+    </div>
+
+  </div>
+
 
 </div>
 
 
+
 <script>
 
-  // ============================================
-  // APPS SCRIPT BACKEND
-  // ============================================
+
+  // ==================================================
+  // YOUR GOOGLE APPS SCRIPT URL
+  // ==================================================
 
   const SCRIPT_URL =
     "PASTE_YOUR_APPS_SCRIPT_URL_HERE";
 
 
-  // ============================================
+
+  // ==================================================
   // DEVICE ID
-  // ============================================
+  // ==================================================
 
   function getDeviceId() {
 
+
     let deviceId =
-      localStorage.getItem("attendanceDeviceId");
+      localStorage.getItem(
+        "attendanceDeviceId"
+      );
+
 
     if (!deviceId) {
 
-      if (crypto.randomUUID) {
+
+      if (
+        window.crypto &&
+        crypto.randomUUID
+      ) {
 
         deviceId =
-          "device-" + crypto.randomUUID();
+          "device-" +
+          crypto.randomUUID();
 
       } else {
 
@@ -137,46 +241,54 @@
             .substring(2, 12);
       }
 
+
       localStorage.setItem(
         "attendanceDeviceId",
         deviceId
       );
     }
 
+
     return deviceId;
   }
 
 
-  // ============================================
-  // USERNAME
-  // ============================================
+
+  // ==================================================
+  // LOAD SAVED USERNAME
+  // ==================================================
 
   function loadUsername() {
 
-    const savedUsername =
+
+    const saved =
       localStorage.getItem(
         "attendanceUsername"
       );
 
-    if (savedUsername) {
+
+    if (saved) {
 
       document
         .getElementById("username")
-        .value = savedUsername;
+        .value = saved;
     }
   }
 
 
-  // ============================================
-  // QR SCANNER
-  // ============================================
 
-  let scannerStarted = false;
+  // ==================================================
+  // START SCANNER
+  // ==================================================
+
   let scanner = null;
+
   let submissionLocked = false;
 
 
-  function startScanner() {
+
+  function continueToScanner() {
+
 
     const username =
       document
@@ -185,12 +297,12 @@
         .trim()
         .toLowerCase();
 
+
     if (!username) {
 
-      document
-        .getElementById("message")
-        .innerText =
-        "Please enter your username first.";
+      alert(
+        "Please enter your username."
+      );
 
       return;
     }
@@ -202,23 +314,27 @@
     );
 
 
-    if (scannerStarted) {
+    document
+      .getElementById("loginSection")
+      .style.display = "none";
 
-      document
-        .getElementById("message")
-        .innerText =
-        "Scanner is already running.";
-
-      return;
-    }
-
-
-    scannerStarted = true;
 
     document
-      .getElementById("message")
-      .innerText =
-      "Starting camera...";
+      .getElementById("scannerSection")
+      .style.display = "block";
+
+
+    startScanner();
+  }
+
+
+
+  function startScanner() {
+
+
+    if (scanner) {
+      return;
+    }
 
 
     scanner =
@@ -227,6 +343,7 @@
         "reader",
 
         {
+
           fps: 10,
 
           qrbox: {
@@ -234,7 +351,12 @@
             height: 250
           },
 
-          rememberLastUsedCamera: true
+          rememberLastUsedCamera: true,
+
+          supportedScanTypes: [
+            Html5QrcodeScanType
+              .SCAN_TYPE_CAMERA
+          ]
         },
 
         false
@@ -245,37 +367,27 @@
       onScanSuccess,
       onScanFailure
     );
-
-
-    document
-      .getElementById("message")
-      .innerText =
-      "Camera ready. Scan today's QR code.";
   }
 
 
+
+  function onScanFailure(error) {
+
+    // Normal failed scan attempts
+    // are ignored.
+
+  }
+
+
+
+  // ==================================================
+  // QR CODE SUCCESS
+  // ==================================================
+
   function onScanSuccess(decodedText) {
 
+
     if (submissionLocked) {
-      return;
-    }
-
-
-    const username =
-      document
-        .getElementById("username")
-        .value
-        .trim()
-        .toLowerCase();
-
-
-    if (!username) {
-
-      document
-        .getElementById("message")
-        .innerText =
-        "Please enter your username first.";
-
       return;
     }
 
@@ -289,507 +401,163 @@
       "Submitting attendance...";
 
 
-    submitAttendance(
-      username,
-      decodedText
-    );
-  }
-
-
-  function onScanFailure(error) {
-    // Normal scan failures are ignored.
-    // The camera continuously searches for a QR code.
-  }
-
-
-  // ============================================
-  // SEND TO GOOGLE APPS SCRIPT
-  // ============================================
-
-  function submitAttendance(
-    username,
-    sessionId
-  ) {
-
-    const data = {
-
-      username: username,
-
-      sessionId:
-        sessionId.trim(),
-
-      deviceId:
-        getDeviceId(),
-
-      userAgent:
-        navigator.userAgent
-    };
-
-
-    fetch(
-      SCRIPT_URL,
-      {
-        method: "POST",
-        body: JSON.stringify(data)
-      }
-    )
-
-    .then(function(response) {
-
-      return response.json();
-
-    })
-
-    .then(function(result) {
-
-      const message =
-        document
-          .getElementById("message");
-
-
-      if (result.success) {
-
-        message.innerText =
-          "✓ Attendance Recorded\n" +
-          result.firstName +
-          " " +
-          result.lastName +
-          "\n" +
-          result.section;
-
-      } else {
-
-        message.innerText =
-          "✗ " + result.status;
-      }
-
-
-      setTimeout(function() {
-
-        submissionLocked = false;
-
-      }, 5000);
-
-    })
-
-    .catch(function(error) {
-
-      console.error(error);
-
-      document
-        .getElementById("message")
-        .innerText =
-        "Error submitting attendance.";
-
-      submissionLocked = false;
-    });
-  }
-
-
-  // ============================================
-  // START PAGE
-  // ============================================
-
-  loadUsername();
-
-</script>
-
-</body>
-</html><!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
-  <title>Class Attendance</title>
-
-  <script src="https://unpkg.com/html5-qrcode"></script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 20px;
-      background: #f5f5f5;
-    }
-
-    .container {
-      max-width: 550px;
-      margin: auto;
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-    }
-
-    input {
-      font-size: 20px;
-      padding: 12px;
-      width: 80%;
-      max-width: 350px;
-      text-align: center;
-    }
-
-    button {
-      font-size: 20px;
-      padding: 14px 28px;
-      margin: 10px;
-      cursor: pointer;
-    }
-
-    #reader {
-      width: 100%;
-      max-width: 500px;
-      margin: 20px auto;
-    }
-
-    #message {
-      font-size: 24px;
-      font-weight: bold;
-      margin-top: 25px;
-      white-space: pre-line;
-    }
-
-    .small {
-      font-size: 14px;
-      color: #666;
-    }
-  </style>
-</head>
-
-<body>
-
-<div class="container">
-
-  <h1>Class Attendance</h1>
-
-  <h2>1. Enter Your Username</h2>
-
-  <input
-    type="text"
-    id="username"
-    placeholder="NEIU username"
-    autocomplete="username"
-    autocapitalize="none"
-  >
-
-  <p class="small">
-    Your username will be remembered on this device.
-  </p>
-
-  <button onclick="startScanner()">
-    Continue to QR Scanner
-  </button>
-
-  <hr>
-
-  <h2>2. Scan Today's Class QR Code</h2>
-
-  <div id="reader"></div>
-
-  <div id="message">
-    Enter your username to begin.
-  </div>
-
-</div>
-
-
-<script>
-
-  // ============================================
-  // APPS SCRIPT BACKEND
-  // ============================================
-
-  const SCRIPT_URL =
-    https://script.google.com/a/macros/neiu.edu/s/AKfycbx0vez2vcT7vBRxCWDIU6wOBnFyY9vSE5xjOhZMyRlvthfDKGOTBfzoAN7rWIewN4MQ/exec
-
-
-  // ============================================
-  // DEVICE ID
-  // ============================================
-
-  function getDeviceId() {
-
-    let deviceId =
-      localStorage.getItem("attendanceDeviceId");
-
-    if (!deviceId) {
-
-      if (crypto.randomUUID) {
-
-        deviceId =
-          "device-" + crypto.randomUUID();
-
-      } else {
-
-        deviceId =
-          "device-" +
-          Date.now() +
-          "-" +
-          Math.random()
-            .toString(36)
-            .substring(2, 12);
-      }
-
-      localStorage.setItem(
-        "attendanceDeviceId",
-        deviceId
-      );
-    }
-
-    return deviceId;
-  }
-
-
-  // ============================================
-  // USERNAME
-  // ============================================
-
-  function loadUsername() {
-
-    const savedUsername =
+    const username =
       localStorage.getItem(
         "attendanceUsername"
       );
 
-    if (savedUsername) {
-
-      document
-        .getElementById("username")
-        .value = savedUsername;
-    }
-  }
-
-
-  // ============================================
-  // QR SCANNER
-  // ============================================
-
-  let scannerStarted = false;
-  let scanner = null;
-  let submissionLocked = false;
-
-
-  function startScanner() {
-
-    const username =
-      document
-        .getElementById("username")
-        .value
-        .trim()
-        .toLowerCase();
-
-    if (!username) {
-
-      document
-        .getElementById("message")
-        .innerText =
-        "Please enter your username first.";
-
-      return;
-    }
-
-
-    localStorage.setItem(
-      "attendanceUsername",
-      username
-    );
-
-
-    if (scannerStarted) {
-
-      document
-        .getElementById("message")
-        .innerText =
-        "Scanner is already running.";
-
-      return;
-    }
-
-
-    scannerStarted = true;
-
-    document
-      .getElementById("message")
-      .innerText =
-      "Starting camera...";
-
-
-    scanner =
-      new Html5QrcodeScanner(
-
-        "reader",
-
-        {
-          fps: 10,
-
-          qrbox: {
-            width: 250,
-            height: 250
-          },
-
-          rememberLastUsedCamera: true
-        },
-
-        false
-      );
-
-
-    scanner.render(
-      onScanSuccess,
-      onScanFailure
-    );
-
-
-    document
-      .getElementById("message")
-      .innerText =
-      "Camera ready. Scan today's QR code.";
-  }
-
-
-  function onScanSuccess(decodedText) {
-
-    if (submissionLocked) {
-      return;
-    }
-
-
-    const username =
-      document
-        .getElementById("username")
-        .value
-        .trim()
-        .toLowerCase();
-
-
-    if (!username) {
-
-      document
-        .getElementById("message")
-        .innerText =
-        "Please enter your username first.";
-
-      return;
-    }
-
-
-    submissionLocked = true;
-
-
-    document
-      .getElementById("message")
-      .innerText =
-      "Submitting attendance...";
-
 
     submitAttendance(
       username,
-      decodedText
+      decodedText.trim()
     );
   }
 
 
-  function onScanFailure(error) {
-    // Normal scan failures are ignored.
-    // The camera continuously searches for a QR code.
-  }
 
-
-  // ============================================
-  // SEND TO GOOGLE APPS SCRIPT
-  // ============================================
+  // ==================================================
+  // JSONP SUBMISSION
+  // ==================================================
 
   function submitAttendance(
     username,
     sessionId
   ) {
 
-    const data = {
 
-      username: username,
-
-      sessionId:
-        sessionId.trim(),
-
-      deviceId:
-        getDeviceId(),
-
-      userAgent:
-        navigator.userAgent
-    };
+    const callbackName =
+      "attendanceCallback_" +
+      Date.now();
 
 
-    fetch(
-      SCRIPT_URL,
-      {
-        method: "POST",
-        body: JSON.stringify(data)
-      }
-    )
+    const params =
+      new URLSearchParams({
 
-    .then(function(response) {
+        username: username,
 
-      return response.json();
+        sessionId: sessionId,
 
-    })
+        deviceId:
+          getDeviceId(),
 
-    .then(function(result) {
+        userAgent:
+          navigator.userAgent,
 
-      const message =
+        callback:
+          callbackName
+      });
+
+
+
+    window[callbackName] =
+      function(result) {
+
+
+        const message =
+          document
+            .getElementById("message");
+
+
+        if (result.success) {
+
+
+          message.innerText =
+            "✓ Attendance Recorded\n\n" +
+            result.firstName +
+            " " +
+            result.lastName +
+            "\n" +
+            result.section;
+
+
+          // Stop scanning after
+          // successful attendance.
+
+          if (scanner) {
+
+            scanner.clear()
+              .catch(function() {});
+          }
+
+
+        } else {
+
+
+          message.innerText =
+            "✗ " +
+            result.status;
+
+
+          // Allow another scan after
+          // an unsuccessful submission.
+
+          setTimeout(
+            function() {
+
+              submissionLocked = false;
+
+            },
+
+            3000
+          );
+        }
+
+
+        delete window[callbackName];
+
+        script.remove();
+      };
+
+
+
+    const script =
+      document.createElement(
+        "script"
+      );
+
+
+    script.src =
+      SCRIPT_URL +
+      "?" +
+      params.toString();
+
+
+    script.onerror =
+      function() {
+
+
         document
-          .getElementById("message");
+          .getElementById("message")
+          .innerText =
+          "Unable to contact attendance server.";
 
-
-      if (result.success) {
-
-        message.innerText =
-          "✓ Attendance Recorded\n" +
-          result.firstName +
-          " " +
-          result.lastName +
-          "\n" +
-          result.section;
-
-      } else {
-
-        message.innerText =
-          "✗ " + result.status;
-      }
-
-
-      setTimeout(function() {
 
         submissionLocked = false;
 
-      }, 5000);
 
-    })
+        delete window[callbackName];
 
-    .catch(function(error) {
+        script.remove();
+      };
 
-      console.error(error);
 
-      document
-        .getElementById("message")
-        .innerText =
-        "Error submitting attendance.";
-
-      submissionLocked = false;
-    });
+    document.body.appendChild(
+      script
+    );
   }
 
 
-  // ============================================
-  // START PAGE
-  // ============================================
+
+  // ==================================================
+  // INITIALIZE PAGE
+  // ==================================================
 
   loadUsername();
 
+
 </script>
 
+
 </body>
+
 </html>
