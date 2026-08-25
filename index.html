@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html>
 
 <head>
@@ -13,113 +12,66 @@
 
   <title>Class Attendance</title>
 
-
-  <script
-    src="https://unpkg.com/html5-qrcode">
-  </script>
-
+  <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
 
     body {
-
-      font-family:
-        Arial,
-        Helvetica,
-        sans-serif;
-
+      font-family: Arial, Helvetica, sans-serif;
       margin: 0;
-
       padding: 20px;
-
       background: #f3f3f3;
-
       text-align: center;
     }
 
-
     .container {
-
       max-width: 600px;
-
       margin: 0 auto;
-
       padding: 30px;
-
       background: white;
-
       border-radius: 12px;
     }
 
-
     h1 {
-
       margin-top: 0;
     }
 
-
     input {
-
       width: 85%;
-
       max-width: 350px;
-
       padding: 14px;
-
       font-size: 20px;
-
       text-align: center;
-
       box-sizing: border-box;
     }
 
-
     button {
-
       padding: 14px 28px;
-
       margin: 15px;
-
       font-size: 20px;
-
       cursor: pointer;
     }
 
-
     #scannerSection {
-
       display: none;
-
       margin-top: 25px;
     }
 
-
     #reader {
-
       width: 100%;
-
       max-width: 500px;
-
       margin: 20px auto;
     }
 
-
     #message {
-
       margin-top: 25px;
-
       font-size: 24px;
-
       font-weight: bold;
-
       white-space: pre-line;
     }
 
-
     .instructions {
-
       color: #666;
-
       font-size: 14px;
     }
 
@@ -127,25 +79,15 @@
 
 </head>
 
-
-
 <body>
-
 
 <div class="container">
 
-
-  <h1>
-    Class Attendance
-  </h1>
-
+  <h1>Class Attendance</h1>
 
   <div id="loginSection">
 
-    <h2>
-      Enter Your Username
-    </h2>
-
+    <h2>Enter Your Username</h2>
 
     <input
       id="username"
@@ -155,53 +97,40 @@
       autocomplete="username"
     >
 
-
     <p class="instructions">
-      Your username will be remembered
-      on this device.
+      Your username will be remembered on this device.
     </p>
 
-
-    <button
-      onclick="continueToScanner()"
-    >
+    <button onclick="continueToScanner()">
       Continue
     </button>
 
   </div>
 
 
-
   <div id="scannerSection">
 
-    <h2>
-      Scan Today's Class QR Code
-    </h2>
-
+    <h2>Scan Today's Class QR Code</h2>
 
     <div id="reader"></div>
 
-
     <div id="message">
-      Camera ready.
+      Preparing camera...
     </div>
 
   </div>
 
-
 </div>
-
 
 
 <script>
 
-
   // ==================================================
-  // YOUR GOOGLE APPS SCRIPT URL
+  // GOOGLE APPS SCRIPT URL
   // ==================================================
 
   const SCRIPT_URL =
-    https://script.google.com/a/macros/neiu.edu/s/AKfycbx0vez2vcT7vBRxCWDIU6wOBnFyY9vSE5xjOhZMyRlvthfDKGOTBfzoAN7rWIewN4MQ/exec
+    https://script.google.com/a/macros/neiu.edu/s/AKfycbx0vez2vcT7vBRxCWDIU6wOBnFyY9vSE5xjOhZMyRlvthfDKGOTBfzoAN7rWIewN4MQ/exec;
 
 
   // ==================================================
@@ -210,15 +139,12 @@
 
   function getDeviceId() {
 
-
     let deviceId =
       localStorage.getItem(
         "attendanceDeviceId"
       );
 
-
     if (!deviceId) {
-
 
       if (
         window.crypto &&
@@ -240,54 +166,46 @@
             .substring(2, 12);
       }
 
-
       localStorage.setItem(
         "attendanceDeviceId",
         deviceId
       );
     }
 
-
     return deviceId;
   }
 
 
-
   // ==================================================
-  // LOAD SAVED USERNAME
+  // USERNAME
   // ==================================================
 
   function loadUsername() {
 
-
-    const saved =
+    const savedUsername =
       localStorage.getItem(
         "attendanceUsername"
       );
 
-
-    if (saved) {
+    if (savedUsername) {
 
       document
         .getElementById("username")
-        .value = saved;
+        .value =
+        savedUsername;
     }
   }
 
 
-
   // ==================================================
-  // START SCANNER
+  // SCANNER
   // ==================================================
 
   let scanner = null;
-
   let submissionLocked = false;
 
 
-
   function continueToScanner() {
-
 
     const username =
       document
@@ -295,7 +213,6 @@
         .value
         .trim()
         .toLowerCase();
-
 
     if (!username) {
 
@@ -306,90 +223,139 @@
       return;
     }
 
-
     localStorage.setItem(
       "attendanceUsername",
       username
     );
 
-
     document
       .getElementById("loginSection")
-      .style.display = "none";
-
+      .style.display =
+      "none";
 
     document
       .getElementById("scannerSection")
-      .style.display = "block";
-
+      .style.display =
+      "block";
 
     startScanner();
   }
 
 
-
   function startScanner() {
 
+    const message =
+      document
+        .getElementById("message");
 
-    if (scanner) {
-      return;
-    }
+    message.innerText =
+      "Looking for camera...";
 
 
-    scanner =
-      new Html5QrcodeScanner(
+    Html5Qrcode.getCameras()
 
-        "reader",
+      .then(function(cameras) {
 
-        {
+        if (
+          !cameras ||
+          cameras.length === 0
+        ) {
 
-          fps: 10,
+          message.innerText =
+            "No camera was found.";
 
-          qrbox: {
-            width: 250,
-            height: 250
+          return;
+        }
+
+
+        message.innerText =
+          "Camera found. Starting scanner...";
+
+
+        let cameraId =
+          cameras[0].id;
+
+
+        /*
+          On phones, the last camera in the list
+          is often the rear-facing camera.
+        */
+
+        if (cameras.length > 1) {
+
+          cameraId =
+            cameras[
+              cameras.length - 1
+            ].id;
+        }
+
+
+        scanner =
+          new Html5Qrcode(
+            "reader"
+          );
+
+
+        return scanner.start(
+
+          cameraId,
+
+          {
+
+            fps: 10,
+
+            qrbox: {
+              width: 250,
+              height: 250
+            }
+
           },
 
-          rememberLastUsedCamera: true,
+          onScanSuccess,
 
-          supportedScanTypes: [
-            Html5QrcodeScanType
-              .SCAN_TYPE_CAMERA
-          ]
-        },
+          onScanFailure
 
-        false
-      );
+        );
 
+      })
 
-    scanner.render(
-      onScanSuccess,
-      onScanFailure
-    );
+      .then(function() {
+
+        message.innerText =
+          "Camera ready. Scan today's QR code.";
+
+      })
+
+      .catch(function(error) {
+
+        console.error(error);
+
+        message.innerText =
+          "Unable to start camera:\n" +
+          String(error);
+      });
   }
-
 
 
   function onScanFailure(error) {
 
-    // Normal failed scan attempts
-    // are ignored.
+    // Normal failures while looking
+    // for a QR code are ignored.
 
   }
 
 
-
   // ==================================================
-  // QR CODE SUCCESS
+  // SUCCESSFUL QR SCAN
   // ==================================================
 
-  function onScanSuccess(decodedText) {
-
+  function onScanSuccess(
+    decodedText
+  ) {
 
     if (submissionLocked) {
       return;
     }
-
 
     submissionLocked = true;
 
@@ -397,7 +363,7 @@
     document
       .getElementById("message")
       .innerText =
-      "Submitting attendance...";
+      "QR code read.\nSubmitting attendance...";
 
 
     const username =
@@ -413,7 +379,6 @@
   }
 
 
-
   // ==================================================
   // JSONP SUBMISSION
   // ==================================================
@@ -423,7 +388,6 @@
     sessionId
   ) {
 
-
     const callbackName =
       "attendanceCallback_" +
       Date.now();
@@ -432,9 +396,11 @@
     const params =
       new URLSearchParams({
 
-        username: username,
+        username:
+          username,
 
-        sessionId: sessionId,
+        sessionId:
+          sessionId,
 
         deviceId:
           getDeviceId(),
@@ -447,10 +413,14 @@
       });
 
 
+    const script =
+      document.createElement(
+        "script"
+      );
+
 
     window[callbackName] =
       function(result) {
-
 
         const message =
           document
@@ -458,7 +428,6 @@
 
 
         if (result.success) {
-
 
           message.innerText =
             "✓ Attendance Recorded\n\n" +
@@ -469,31 +438,28 @@
             result.section;
 
 
-          // Stop scanning after
-          // successful attendance.
-
           if (scanner) {
 
-            scanner.clear()
+            scanner.stop()
               .catch(function() {});
           }
 
 
         } else {
 
-
           message.innerText =
             "✗ " +
             result.status;
 
 
-          // Allow another scan after
-          // an unsuccessful submission.
-
           setTimeout(
             function() {
 
-              submissionLocked = false;
+              submissionLocked =
+                false;
+
+              message.innerText =
+                "Scan today's QR code.";
 
             },
 
@@ -502,17 +468,31 @@
         }
 
 
-        delete window[callbackName];
+        delete window[
+          callbackName
+        ];
 
         script.remove();
       };
 
 
+    script.onerror =
+      function() {
 
-    const script =
-      document.createElement(
-        "script"
-      );
+        document
+          .getElementById("message")
+          .innerText =
+          "Unable to contact attendance server.";
+
+        submissionLocked =
+          false;
+
+        delete window[
+          callbackName
+        ];
+
+        script.remove();
+      };
 
 
     script.src =
@@ -521,41 +501,20 @@
       params.toString();
 
 
-    script.onerror =
-      function() {
-
-
-        document
-          .getElementById("message")
-          .innerText =
-          "Unable to contact attendance server.";
-
-
-        submissionLocked = false;
-
-
-        delete window[callbackName];
-
-        script.remove();
-      };
-
-
-    document.body.appendChild(
-      script
-    );
+    document.body
+      .appendChild(
+        script
+      );
   }
 
 
-
   // ==================================================
-  // INITIALIZE PAGE
+  // PAGE STARTUP
   // ==================================================
 
   loadUsername();
 
-
 </script>
-
 
 </body>
 
