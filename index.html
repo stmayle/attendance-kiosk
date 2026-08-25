@@ -125,6 +125,46 @@
   var submissionLocked = false;
 
 
+  /*
+    DEVICE ID
+
+    The first time this browser visits the site,
+    it receives a random identifier.
+
+    The identifier is then stored in localStorage
+    and reused for future attendance submissions.
+  */
+
+  function getDeviceId() {
+
+    var deviceId =
+      localStorage.getItem(
+        "attendanceDeviceId"
+      );
+
+
+    if (!deviceId) {
+
+      deviceId =
+        "device-" +
+        new Date().getTime() +
+        "-" +
+        Math.random()
+          .toString(36)
+          .substring(2, 12);
+
+
+      localStorage.setItem(
+        "attendanceDeviceId",
+        deviceId
+      );
+    }
+
+
+    return deviceId;
+  }
+
+
   document
     .getElementById("continueButton")
     .onclick = function() {
@@ -243,6 +283,10 @@
       new Date().getTime();
 
 
+    var deviceId =
+      getDeviceId();
+
+
     window[callbackName] =
       function(result) {
 
@@ -289,6 +333,8 @@
       encodeURIComponent(username) +
       "&sessionId=" +
       encodeURIComponent(sessionId) +
+      "&deviceId=" +
+      encodeURIComponent(deviceId) +
       "&callback=" +
       encodeURIComponent(callbackName);
 
