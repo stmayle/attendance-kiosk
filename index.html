@@ -10,7 +10,7 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>Attendance QR Test</title>
+  <title>Class Attendance</title>
 
   <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -59,6 +59,7 @@
       font-size: 24px;
       font-weight: bold;
       margin-top: 25px;
+      white-space: pre-line;
     }
 
   </style>
@@ -70,7 +71,7 @@
 
 <div class="container">
 
-  <h1>Class Attendance Test</h1>
+  <h1>Class Attendance</h1>
 
 
   <div id="usernameSection">
@@ -82,6 +83,7 @@
       id="username"
       placeholder="NEIU username"
       autocapitalize="none"
+      autocomplete="username"
     >
 
     <br>
@@ -110,6 +112,81 @@
 
 <script>
 
+  // ==================================================
+  // APPS SCRIPT WEB APP URL
+  // ==================================================
+
+  const SCRIPT_URL =
+    https://script.google.com/macros/s/AKfycbx0vez2vcT7vBRxCWDIU6wOBnFyY9vSE5xjOhZMyRlvthfDKGOTBfzoAN7rWIewN4MQ/exec
+
+
+  // ==================================================
+  // DEVICE ID
+  // ==================================================
+
+  function getDeviceId() {
+
+    let deviceId =
+      localStorage.getItem(
+        "attendanceDeviceId"
+      );
+
+    if (!deviceId) {
+
+      if (
+        window.crypto &&
+        crypto.randomUUID
+      ) {
+
+        deviceId =
+          "device-" +
+          crypto.randomUUID();
+
+      } else {
+
+        deviceId =
+          "device-" +
+          Date.now() +
+          "-" +
+          Math.random()
+            .toString(36)
+            .substring(2, 12);
+      }
+
+      localStorage.setItem(
+        "attendanceDeviceId",
+        deviceId
+      );
+    }
+
+    return deviceId;
+  }
+
+
+  // ==================================================
+  // USERNAME
+  // ==================================================
+
+  let currentUsername = "";
+
+  const savedUsername =
+    localStorage.getItem(
+      "attendanceUsername"
+    );
+
+  if (savedUsername) {
+
+    document
+      .getElementById("username")
+      .value =
+      savedUsername;
+  }
+
+
+  // ==================================================
+  // CONTINUE BUTTON
+  // ==================================================
+
   let scannerStarted = false;
 
 
@@ -123,7 +200,8 @@
           document
             .getElementById("username")
             .value
-            .trim();
+            .trim()
+            .toLowerCase();
 
         if (!username) {
 
@@ -135,14 +213,26 @@
         }
 
 
+        currentUsername =
+          username;
+
+
+        localStorage.setItem(
+          "attendanceUsername",
+          username
+        );
+
+
         document
           .getElementById("usernameSection")
-          .style.display = "none";
+          .style.display =
+          "none";
 
 
         document
           .getElementById("scannerSection")
-          .style.display = "block";
+          .style.display =
+          "block";
 
 
         if (!scannerStarted) {
@@ -155,17 +245,41 @@
     );
 
 
+  // ==================================================
+  // QR SCANNER
+  // ==================================================
+
+  let submissionLocked = false;
+
+
   function startScanner() {
+
 
     function onScanSuccess(
       decodedText
     ) {
 
+      if (submissionLocked) {
+        return;
+      }
+
+
+      submissionLocked =
+        true;
+
+
       document
         .getElementById("result")
         .innerText =
         "QR CODE READ: " +
-        decodedText;
+        decodedText +
+        "\nSubmitting attendance...";
+
+
+      submitAttendance(
+        currentUsername,
+        decodedText.trim()
+      );
     }
 
 
@@ -173,7 +287,7 @@
       error
     ) {
 
-      // Ignore normal failed scans.
+      // Normal scan failures are ignored.
 
     }
 
@@ -192,7 +306,8 @@
             height: 250
           },
 
-          rememberLastUsedCamera: true
+          rememberLastUsedCamera:
+            true
 
         },
 
@@ -204,6 +319,129 @@
       onScanSuccess,
       onScanFailure
     );
+  }
+
+
+  // ==================================================
+  // SEND ATTENDANCE USING JSONP
+  // ==================================================
+
+  function submitAttendance(
+    username,
+    sessionId
+  ) {
+
+
+    const callbackName =
+      "attendanceCallback_" +
+      Date.now();
+
+
+    const params =
+      new URLSearchParams({
+
+        username:
+          username,
+
+        sessionId:
+          sessionId,
+
+        deviceId:
+          getDeviceId(),
+
+        userAgent:
+          navigator.userAgent,
+
+        callback:
+          callbackName
+      });
+
+
+    const script =
+      document.createElement(
+        "script"
+      );
+
+
+    window[callbackName] =
+      function(result) {
+
+
+        const resultBox =
+          document
+            .getElementById("result");
+
+
+        if (result.success) {
+
+          resultBox.innerText =
+            "✓ Attendance Recorded\n" +
+            result.firstName +
+            " " +
+            result.lastName +
+            "\n" +
+            result.section;
+
+        } else {
+
+          resultBox.innerText =
+            "✗ " +
+            result.status;
+        }
+
+
+        delete window[
+          callbackName
+        ];
+
+        script.remove();
+
+
+        setTimeout(
+          function() {
+
+            submissionLocked =
+              false;
+
+          },
+
+          4000
+        );
+      };
+
+
+    script.onerror =
+      function() {
+
+
+        document
+          .getElementById("result")
+          .innerText =
+          "Unable to contact attendance server.";
+
+
+        submissionLocked =
+          false;
+
+
+        delete window[
+          callbackName
+        ];
+
+        script.remove();
+      };
+
+
+    script.src =
+      SCRIPT_URL +
+      "?" +
+      params.toString();
+
+
+    document.body
+      .appendChild(
+        script
+      );
   }
 
 </script>
