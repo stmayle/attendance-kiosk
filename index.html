@@ -45,6 +45,19 @@
       margin: 15px;
     }
 
+    #forgetButton {
+      font-size: 14px;
+      padding: 8px 14px;
+      margin-top: 5px;
+      display: none;
+    }
+
+    #savedMessage {
+      font-size: 14px;
+      color: #666;
+      margin-top: 8px;
+    }
+
     #reader {
       width: 100%;
       max-width: 500px;
@@ -83,12 +96,24 @@
       id="username"
       placeholder="NEIU username"
       autocapitalize="none"
+      autocomplete="username"
     >
+
+    <div id="savedMessage"></div>
 
     <br>
 
     <button id="continueButton">
       Continue to Scanner
+    </button>
+
+    <br>
+
+    <button
+      id="forgetButton"
+      onclick="forgetUsername()"
+    >
+      Forget Saved Username
     </button>
 
   </div>
@@ -116,7 +141,7 @@
   */
 
   var SCRIPT_URL =
-    "https://script.google.com/macros/s/AKfycbyE-JYOlFuMXLNZj0lRHlS9aEr7ViP7bcItYZKB9XY-mb90iWg8yqKmePtDhUuu6H1u/exec";
+    "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE";
 
 
   var currentUsername = "";
@@ -165,6 +190,81 @@
 
 
   /*
+    SAVED USERNAME
+  */
+
+  function loadSavedUsername() {
+
+    var savedUsername =
+      localStorage.getItem(
+        "attendanceUsername"
+      );
+
+
+    if (savedUsername) {
+
+      document
+        .getElementById("username")
+        .value =
+        savedUsername;
+
+
+      document
+        .getElementById("savedMessage")
+        .innerText =
+        "Saved username: " +
+        savedUsername;
+
+
+      document
+        .getElementById("forgetButton")
+        .style.display =
+        "inline-block";
+    }
+  }
+
+
+
+  function saveUsername(
+    username
+  ) {
+
+    localStorage.setItem(
+      "attendanceUsername",
+      username
+    );
+  }
+
+
+
+  function forgetUsername() {
+
+    localStorage.removeItem(
+      "attendanceUsername"
+    );
+
+
+    document
+      .getElementById("username")
+      .value =
+      "";
+
+
+    document
+      .getElementById("savedMessage")
+      .innerText =
+      "";
+
+
+    document
+      .getElementById("forgetButton")
+      .style.display =
+      "none";
+  }
+
+
+
+  /*
     CONTINUE BUTTON
   */
 
@@ -193,6 +293,16 @@
 
       currentUsername =
         username;
+
+
+      /*
+        Remember the username
+        on this browser/device.
+      */
+
+      saveUsername(
+        username
+      );
 
 
       document
@@ -240,11 +350,8 @@
 
 
       /*
-        A QR code has been successfully read.
-
-        Shut the camera down immediately,
-        regardless of whether Google later
-        accepts or rejects the attendance.
+        QR successfully decoded.
+        Shut camera off immediately.
       */
 
       stopScanner();
@@ -366,10 +473,6 @@
       function(result) {
 
 
-        /*
-          SUCCESSFUL ATTENDANCE
-        */
-
         if (result.success) {
 
 
@@ -422,10 +525,6 @@
 
         }
 
-
-        /*
-          UNSUCCESSFUL ATTENDANCE
-        */
 
         else {
 
@@ -488,6 +587,14 @@
       requestScript
     );
   }
+
+
+
+  /*
+    PAGE STARTUP
+  */
+
+  loadSavedUsername();
 
 </script>
 
