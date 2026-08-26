@@ -116,7 +116,7 @@
   */
 
   var SCRIPT_URL =
-    "https://script.google.com/macros/s/AKfycbyE-JYOlFuMXLNZj0lRHlS9aEr7ViP7bcItYZKB9XY-mb90iWg8yqKmePtDhUuu6H1u/exec";
+    "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE";
 
 
   var currentUsername = "";
@@ -126,6 +126,7 @@
   var submissionLocked = false;
 
   var qrScanner = null;
+
 
 
   /*
@@ -236,6 +237,17 @@
 
       submissionLocked =
         true;
+
+
+      /*
+        A QR code has been successfully read.
+
+        Shut the camera down immediately,
+        regardless of whether Google later
+        accepts or rejects the attendance.
+      */
+
+      stopScanner();
 
 
       document
@@ -361,14 +373,6 @@
         if (result.success) {
 
 
-          /*
-            Shut the camera off automatically.
-          */
-
-          stopScanner();
-
-
-
           if (
             result.action === "IN"
           ) {
@@ -416,7 +420,6 @@
 
           }
 
-
         }
 
 
@@ -430,18 +433,9 @@
           document
             .getElementById("result")
             .innerText =
-            "Attendance not recorded\n" +
+            "Attendance not recorded\n\n" +
             result.status;
 
-
-          /*
-            Leave camera active so the
-            student can scan the correct
-            QR code if necessary.
-          */
-
-          submissionLocked =
-            false;
         }
 
 
@@ -486,10 +480,6 @@
           .getElementById("result")
           .innerText =
           "Could not contact attendance server.";
-
-
-        submissionLocked =
-          false;
 
       };
 
