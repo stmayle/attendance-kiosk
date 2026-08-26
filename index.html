@@ -112,8 +112,7 @@
 <script>
 
   /*
-    REPLACE ONLY THE TEXT BETWEEN THE QUOTES
-    WITH YOUR APPS SCRIPT /exec URL
+    GOOGLE APPS SCRIPT WEB APP URL
   */
 
   var SCRIPT_URL =
@@ -121,18 +120,16 @@
 
 
   var currentUsername = "";
+
   var scannerStarted = false;
+
   var submissionLocked = false;
+
+  var qrScanner = null;
 
 
   /*
     DEVICE ID
-
-    The first time this browser visits the site,
-    it receives a random identifier.
-
-    The identifier is then stored in localStorage
-    and reused for future attendance submissions.
   */
 
   function getDeviceId() {
@@ -165,9 +162,15 @@
   }
 
 
+
+  /*
+    CONTINUE BUTTON
+  */
+
   document
     .getElementById("continueButton")
     .onclick = function() {
+
 
       var username =
         document
@@ -179,23 +182,28 @@
 
       if (username === "") {
 
-        alert("Please enter your username.");
+        alert(
+          "Please enter your username."
+        );
 
         return;
       }
 
 
-      currentUsername = username;
+      currentUsername =
+        username;
 
 
       document
         .getElementById("usernameSection")
-        .style.display = "none";
+        .style.display =
+        "none";
 
 
       document
         .getElementById("scannerSection")
-        .style.display = "block";
+        .style.display =
+        "block";
 
 
       if (!scannerStarted) {
@@ -207,26 +215,33 @@
     };
 
 
+
+  /*
+    START QR SCANNER
+  */
+
   function startScanner() {
 
 
-    function onScanSuccess(decodedText) {
+    function onScanSuccess(
+      decodedText
+    ) {
 
 
       if (submissionLocked) {
+
         return;
       }
 
 
-      submissionLocked = true;
+      submissionLocked =
+        true;
 
 
       document
         .getElementById("result")
         .innerText =
-        "QR CODE READ: " +
-        decodedText +
-        "\nSubmitting attendance...";
+        "QR code read.\nSubmitting attendance...";
 
 
       sendAttendance(
@@ -236,14 +251,21 @@
     }
 
 
-    function onScanFailure(error) {
 
-      // Normal failed scans are ignored.
+    function onScanFailure(
+      error
+    ) {
+
+      /*
+        Normal scanning failures
+        are ignored.
+      */
 
     }
 
 
-    var scanner =
+
+    qrScanner =
       new Html5QrcodeScanner(
 
         "reader",
@@ -253,11 +275,15 @@
           fps: 10,
 
           qrbox: {
+
             width: 250,
+
             height: 250
+
           },
 
-          rememberLastUsedCamera: true
+          rememberLastUsedCamera:
+            true
 
         },
 
@@ -265,12 +291,48 @@
       );
 
 
-    scanner.render(
+    qrScanner.render(
       onScanSuccess,
       onScanFailure
     );
   }
 
+
+
+  /*
+    STOP CAMERA
+  */
+
+  function stopScanner() {
+
+
+    if (qrScanner) {
+
+
+      qrScanner
+        .clear()
+        .then(function() {
+
+          qrScanner = null;
+
+        })
+        .catch(function(error) {
+
+          console.log(
+            "Scanner cleanup:",
+            error
+          );
+
+        });
+
+    }
+  }
+
+
+
+  /*
+    SEND ATTENDANCE TO APPS SCRIPT
+  */
 
   function sendAttendance(
     username,
@@ -287,44 +349,120 @@
       getDeviceId();
 
 
+
     window[callbackName] =
       function(result) {
 
 
+        /*
+          SUCCESSFUL ATTENDANCE
+        */
+
         if (result.success) {
 
-          document
-            .getElementById("result")
-            .innerText =
-            "Attendance Recorded\n" +
-            result.firstName +
-            " " +
-            result.lastName +
-            "\n" +
-            result.section;
 
-        } else {
+          /*
+            Shut the camera off automatically.
+          */
+
+          stopScanner();
+
+
+
+          if (
+            result.action === "IN"
+          ) {
+
+
+            document
+              .getElementById("result")
+              .innerText =
+              "✓ Checked IN\n\n" +
+              result.firstName +
+              " " +
+              result.lastName +
+              "\n" +
+              result.section;
+
+
+          } else if (
+            result.action === "OUT"
+          ) {
+
+
+            document
+              .getElementById("result")
+              .innerText =
+              "✓ Checked OUT\n\n" +
+              result.firstName +
+              " " +
+              result.lastName +
+              "\n" +
+              result.section;
+
+
+          } else {
+
+
+            document
+              .getElementById("result")
+              .innerText =
+              "✓ Attendance Recorded\n\n" +
+              result.firstName +
+              " " +
+              result.lastName +
+              "\n" +
+              result.section;
+
+          }
+
+
+        }
+
+
+        /*
+          UNSUCCESSFUL ATTENDANCE
+        */
+
+        else {
+
 
           document
             .getElementById("result")
             .innerText =
             "Attendance not recorded\n" +
             result.status;
+
+
+          /*
+            Leave camera active so the
+            student can scan the correct
+            QR code if necessary.
+          */
+
+          submissionLocked =
+            false;
         }
 
 
-        submissionLocked = false;
 
-        delete window[callbackName];
+        delete window[
+          callbackName
+        ];
+
 
         document.body.removeChild(
           requestScript
         );
+
       };
 
 
+
     var requestScript =
-      document.createElement("script");
+      document.createElement(
+        "script"
+      );
 
 
     requestScript.src =
@@ -339,15 +477,20 @@
       encodeURIComponent(callbackName);
 
 
+
     requestScript.onerror =
       function() {
+
 
         document
           .getElementById("result")
           .innerText =
           "Could not contact attendance server.";
 
-        submissionLocked = false;
+
+        submissionLocked =
+          false;
+
       };
 
 
