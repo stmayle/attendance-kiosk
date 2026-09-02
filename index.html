@@ -43,12 +43,17 @@
       font-size: 20px;
       padding: 14px 28px;
       margin: 15px;
+      cursor: pointer;
     }
 
     #forgetButton {
       font-size: 14px;
       padding: 8px 14px;
       margin-top: 5px;
+      display: none;
+    }
+
+    #scanAgainButton {
       display: none;
     }
 
@@ -129,6 +134,13 @@
       Waiting for QR code...
     </div>
 
+    <button
+      id="scanAgainButton"
+      onclick="scanAgain()"
+    >
+      Scan Another Code
+    </button>
+
   </div>
 
 </div>
@@ -145,8 +157,6 @@
 
 
   var currentUsername = "";
-
-  var scannerStarted = false;
 
   var submissionLocked = false;
 
@@ -225,9 +235,7 @@
 
 
 
-  function saveUsername(
-    username
-  ) {
+  function saveUsername(username) {
 
     localStorage.setItem(
       "attendanceUsername",
@@ -295,11 +303,6 @@
         username;
 
 
-      /*
-        Remember the username
-        on this browser/device.
-      */
-
       saveUsername(
         username
       );
@@ -317,12 +320,7 @@
         "block";
 
 
-      if (!scannerStarted) {
-
-        scannerStarted = true;
-
-        startScanner();
-      }
+      startScanner();
     };
 
 
@@ -332,6 +330,39 @@
   */
 
   function startScanner() {
+
+
+    submissionLocked =
+      false;
+
+
+    document
+      .getElementById("scanAgainButton")
+      .style.display =
+      "none";
+
+
+    document
+      .getElementById("result")
+      .innerText =
+      "Waiting for QR code...";
+
+
+    /*
+      If an old scanner object still exists,
+      clean it up before creating a new one.
+    */
+
+    if (qrScanner) {
+
+      qrScanner
+        .clear()
+        .catch(function() {});
+
+      qrScanner =
+        null;
+    }
+
 
 
     function onScanSuccess(
@@ -350,8 +381,8 @@
 
 
       /*
-        QR successfully decoded.
-        Shut camera off immediately.
+        A QR has been successfully decoded.
+        Turn the camera off immediately.
       */
 
       stopScanner();
@@ -428,13 +459,16 @@
     if (qrScanner) {
 
 
-      qrScanner
+      var scannerToStop =
+        qrScanner;
+
+
+      qrScanner =
+        null;
+
+
+      scannerToStop
         .clear()
-        .then(function() {
-
-          qrScanner = null;
-
-        })
         .catch(function(error) {
 
           console.log(
@@ -445,6 +479,58 @@
         });
 
     }
+  }
+
+
+
+  /*
+    SCAN ANOTHER CODE
+  */
+
+  function scanAgain() {
+
+
+    document
+      .getElementById("scanAgainButton")
+      .style.display =
+      "none";
+
+
+    document
+      .getElementById("result")
+      .innerText =
+      "Restarting scanner...";
+
+
+    /*
+      Give the previous camera cleanup
+      a brief moment to finish before
+      creating a fresh scanner.
+    */
+
+    setTimeout(
+      function() {
+
+        startScanner();
+
+      },
+
+      500
+    );
+  }
+
+
+
+  /*
+    SHOW SCAN-AGAIN BUTTON
+  */
+
+  function showScanAgainButton() {
+
+    document
+      .getElementById("scanAgainButton")
+      .style.display =
+      "inline-block";
   }
 
 
@@ -538,6 +624,15 @@
         }
 
 
+        /*
+          Whether accepted or rejected,
+          allow another scan without
+          refreshing the browser.
+        */
+
+        showScanAgainButton();
+
+
 
         delete window[
           callbackName
@@ -579,6 +674,9 @@
           .getElementById("result")
           .innerText =
           "Could not contact attendance server.";
+
+
+        showScanAgainButton();
 
       };
 
