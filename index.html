@@ -148,35 +148,25 @@
 
 <script>
 
-  /*
-    CURRENT GOOGLE APPS SCRIPT WEB APP
-  */
-
   var SCRIPT_URL =
     "https://script.google.com/macros/s/AKfycbyE-JYOlFuMXLNZj0lRHlS9aEr7ViP7bcItYZKB9XY-mb90iWg8yqKmePtDhUuu6H1u/exec";
 
 
-  var currentUsername = "";
-
-  var submissionLocked = false;
-
-  var qrScanner = null;
-
-  /*
-    Every newly created scanner gets a new number.
-
-    If an old scanner somehow survives cleanup,
-    its callbacks will be ignored.
-  */
-
-  var scannerGeneration = 0;
+  var currentUsername =
+    "";
 
 
-  /*
-    Keep track of camera cleanup so we never
-    start a new scanner while an old one is
-    still shutting down.
-  */
+  var submissionLocked =
+    false;
+
+
+  var qrScanner =
+    null;
+
+
+  var scannerGeneration =
+    0;
+
 
   var scannerCleanupPromise =
     Promise.resolve();
@@ -292,7 +282,7 @@
 
 
   // ==================================================
-  // CONTINUE BUTTON
+  // CONTINUE
   // ==================================================
 
   document
@@ -308,7 +298,9 @@
           .toLowerCase();
 
 
-      if (username === "") {
+      if (
+        username === ""
+      ) {
 
         alert(
           "Please enter your username."
@@ -366,29 +358,16 @@
       "Starting scanner...";
 
 
-    /*
-      Give this scanner its own generation number.
-    */
-
     scannerGeneration++;
+
 
     var thisGeneration =
       scannerGeneration;
 
 
-    /*
-      Wait for any previous camera cleanup to
-      finish BEFORE creating another scanner.
-    */
-
     scannerCleanupPromise
       .then(function() {
 
-
-        /*
-          A newer scanner request may have been
-          made while we were waiting.
-        */
 
         if (
           thisGeneration !==
@@ -437,10 +416,6 @@
         ) {
 
 
-          /*
-            Ignore callbacks from an old scanner.
-          */
-
           if (
             thisGeneration !==
             scannerGeneration
@@ -468,11 +443,6 @@
             "QR code read.\nSubmitting attendance...";
 
 
-          /*
-            Stop the camera completely BEFORE
-            sending attendance.
-          */
-
           stopScanner()
             .then(function() {
 
@@ -491,10 +461,7 @@
           error
         ) {
 
-          /*
-            Normal failed QR recognition
-            attempts are ignored.
-          */
+          // Normal failed reads are ignored.
 
         }
 
@@ -550,7 +517,7 @@
 
 
   // ==================================================
-  // SCAN ANOTHER CODE
+  // SCAN AGAIN
   // ==================================================
 
   function scanAgain() {
@@ -602,14 +569,17 @@
       );
 
 
-    /*
-      Prevent a browser from reporting an error
-      after the callback has already succeeded.
-    */
-
     var requestFinished =
       false;
 
+
+
+    /*
+      30-second confirmation timeout.
+
+      If confirmation is lost, rescanning is safe
+      because the backend is now idempotent.
+    */
 
     var timeoutId =
       setTimeout(
@@ -630,7 +600,9 @@
           document
             .getElementById("result")
             .innerText =
-            "Unable to confirm attendance.\n\nPlease try once more or ask the instructor.";
+            "Unable to confirm attendance.\n\n" +
+            "Your attendance may already have been recorded.\n\n" +
+            "Tap Scan Another Code and scan the same code again.";
 
 
           showScanAgainButton();
@@ -640,7 +612,7 @@
 
         },
 
-        15000
+        30000
       );
 
 
@@ -666,17 +638,78 @@
         );
 
 
-        // --------------------------------------
-        // SUCCESS
-        // --------------------------------------
+
+        // ======================================
+        // ALREADY RECORDED
+        // ======================================
 
         if (
+          result.success &&
+          result.alreadyRecorded
+        ) {
+
+
+          if (
+            result.action ===
+            "IN"
+          ) {
+
+            document
+              .getElementById("result")
+              .innerText =
+              "✓ Check IN already recorded\n\n" +
+              result.firstName +
+              " " +
+              result.lastName +
+              "\n" +
+              result.section;
+
+          }
+
+
+          else if (
+            result.action ===
+            "OUT"
+          ) {
+
+            document
+              .getElementById("result")
+              .innerText =
+              "✓ Check OUT already recorded\n\n" +
+              result.firstName +
+              " " +
+              result.lastName +
+              "\n" +
+              result.section;
+
+          }
+
+
+          else {
+
+            document
+              .getElementById("result")
+              .innerText =
+              "✓ Attendance already recorded";
+
+          }
+
+        }
+
+
+
+        // ======================================
+        // NEW SUCCESS
+        // ======================================
+
+        else if (
           result.success
         ) {
 
 
           if (
-            result.action === "IN"
+            result.action ===
+            "IN"
           ) {
 
             document
@@ -693,7 +726,8 @@
 
 
           else if (
-            result.action === "OUT"
+            result.action ===
+            "OUT"
           ) {
 
             document
@@ -726,9 +760,10 @@
         }
 
 
-        // --------------------------------------
+
+        // ======================================
         // REJECTED / FLAGGED
-        // --------------------------------------
+        // ======================================
 
         else {
 
@@ -741,16 +776,10 @@
         }
 
 
+
         showScanAgainButton();
 
 
-        /*
-          Do not remove the currently executing
-          JSONP script immediately. Some browsers
-          can interpret that as a failed load.
-
-          Clean it up shortly afterward instead.
-        */
 
         setTimeout(
           cleanupRequest,
@@ -764,12 +793,6 @@
     requestScript.onerror =
       function() {
 
-
-        /*
-          Some browsers may fire an error event
-          after the callback already ran.
-          Ignore it if the request succeeded.
-        */
 
         if (
           requestFinished
@@ -791,7 +814,9 @@
         document
           .getElementById("result")
           .innerText =
-          "Unable to confirm attendance.\n\nPlease try once more or ask the instructor.";
+          "Unable to confirm attendance.\n\n" +
+          "Your attendance may already have been recorded.\n\n" +
+          "Tap Scan Another Code and scan the same code again.";
 
 
         showScanAgainButton();
@@ -873,7 +898,7 @@
 
 
   // ==================================================
-  // PAGE STARTUP
+  // STARTUP
   // ==================================================
 
   loadSavedUsername();
