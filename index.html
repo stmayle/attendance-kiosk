@@ -149,7 +149,7 @@
 <script>
 
   /*
-    GOOGLE APPS SCRIPT WEB APP URL
+    CURRENT GOOGLE APPS SCRIPT WEB APP
   */
 
   var SCRIPT_URL =
@@ -162,11 +162,30 @@
 
   var qrScanner = null;
 
+  /*
+    Every newly created scanner gets a new number.
+
+    If an old scanner somehow survives cleanup,
+    its callbacks will be ignored.
+  */
+
+  var scannerGeneration = 0;
 
 
   /*
-    DEVICE ID
+    Keep track of camera cleanup so we never
+    start a new scanner while an old one is
+    still shutting down.
   */
+
+  var scannerCleanupPromise =
+    Promise.resolve();
+
+
+
+  // ==================================================
+  // DEVICE ID
+  // ==================================================
 
   function getDeviceId() {
 
@@ -199,9 +218,9 @@
 
 
 
-  /*
-    SAVED USERNAME
-  */
+  // ==================================================
+  // SAVED USERNAME
+  // ==================================================
 
   function loadSavedUsername() {
 
@@ -272,14 +291,14 @@
 
 
 
-  /*
-    CONTINUE BUTTON
-  */
+  // ==================================================
+  // CONTINUE BUTTON
+  // ==================================================
 
   document
     .getElementById("continueButton")
-    .onclick = function() {
-
+    .onclick =
+    function() {
 
       var username =
         document
@@ -325,12 +344,11 @@
 
 
 
-  /*
-    START QR SCANNER
-  */
+  // ==================================================
+  // START SCANNER
+  // ==================================================
 
   function startScanner() {
-
 
     submissionLocked =
       false;
@@ -345,128 +363,175 @@
     document
       .getElementById("result")
       .innerText =
-      "Waiting for QR code...";
+      "Starting scanner...";
 
 
     /*
-      If an old scanner object still exists,
-      clean it up before creating a new one.
+      Give this scanner its own generation number.
     */
 
-    if (qrScanner) {
+    scannerGeneration++;
 
-      qrScanner
-        .clear()
-        .catch(function() {});
-
-      qrScanner =
-        null;
-    }
+    var thisGeneration =
+      scannerGeneration;
 
 
+    /*
+      Wait for any previous camera cleanup to
+      finish BEFORE creating another scanner.
+    */
 
-    function onScanSuccess(
-      decodedText
-    ) {
-
-
-      if (submissionLocked) {
-
-        return;
-      }
+    scannerCleanupPromise
+      .then(function() {
 
 
-      submissionLocked =
-        true;
+        /*
+          A newer scanner request may have been
+          made while we were waiting.
+        */
+
+        if (
+          thisGeneration !==
+          scannerGeneration
+        ) {
+
+          return;
+        }
 
 
-      /*
-        A QR has been successfully decoded.
-        Turn the camera off immediately.
-      */
-
-      stopScanner();
+        document
+          .getElementById("result")
+          .innerText =
+          "Waiting for QR code...";
 
 
-      document
-        .getElementById("result")
-        .innerText =
-        "QR code read.\nSubmitting attendance...";
+        qrScanner =
+          new Html5QrcodeScanner(
 
+            "reader",
 
-      sendAttendance(
-        currentUsername,
-        decodedText
-      );
-    }
+            {
 
+              fps: 10,
 
+              qrbox: {
 
-    function onScanFailure(
-      error
-    ) {
+                width: 250,
 
-      /*
-        Normal scanning failures
-        are ignored.
-      */
+                height: 250
 
-    }
+              },
+
+              rememberLastUsedCamera:
+                true
+
+            },
+
+            false
+          );
 
 
 
-    qrScanner =
-      new Html5QrcodeScanner(
-
-        "reader",
-
-        {
-
-          fps: 10,
-
-          qrbox: {
-
-            width: 250,
-
-            height: 250
-
-          },
-
-          rememberLastUsedCamera:
-            true
-
-        },
-
-        false
-      );
+        function onScanSuccess(
+          decodedText
+        ) {
 
 
-    qrScanner.render(
-      onScanSuccess,
-      onScanFailure
-    );
+          /*
+            Ignore callbacks from an old scanner.
+          */
+
+          if (
+            thisGeneration !==
+            scannerGeneration
+          ) {
+
+            return;
+          }
+
+
+          if (
+            submissionLocked
+          ) {
+
+            return;
+          }
+
+
+          submissionLocked =
+            true;
+
+
+          document
+            .getElementById("result")
+            .innerText =
+            "QR code read.\nSubmitting attendance...";
+
+
+          /*
+            Stop the camera completely BEFORE
+            sending attendance.
+          */
+
+          stopScanner()
+            .then(function() {
+
+              sendAttendance(
+                currentUsername,
+                decodedText
+              );
+
+            });
+
+        }
+
+
+
+        function onScanFailure(
+          error
+        ) {
+
+          /*
+            Normal failed QR recognition
+            attempts are ignored.
+          */
+
+        }
+
+
+
+        qrScanner.render(
+          onScanSuccess,
+          onScanFailure
+        );
+
+      });
+
   }
 
 
 
-  /*
-    STOP CAMERA
-  */
+  // ==================================================
+  // STOP SCANNER
+  // ==================================================
 
   function stopScanner() {
 
+    if (!qrScanner) {
 
-    if (qrScanner) {
-
-
-      var scannerToStop =
-        qrScanner;
+      return scannerCleanupPromise;
+    }
 
 
-      qrScanner =
-        null;
+    var scannerToStop =
+      qrScanner;
 
 
+    qrScanner =
+      null;
+
+
+    scannerCleanupPromise =
       scannerToStop
         .clear()
         .catch(function(error) {
@@ -478,17 +543,17 @@
 
         });
 
-    }
+
+    return scannerCleanupPromise;
   }
 
 
 
-  /*
-    SCAN ANOTHER CODE
-  */
+  // ==================================================
+  // SCAN ANOTHER CODE
+  // ==================================================
 
   function scanAgain() {
-
 
     document
       .getElementById("scanAgainButton")
@@ -502,28 +567,10 @@
       "Restarting scanner...";
 
 
-    /*
-      Give the previous camera cleanup
-      a brief moment to finish before
-      creating a fresh scanner.
-    */
-
-    setTimeout(
-      function() {
-
-        startScanner();
-
-      },
-
-      500
-    );
+    startScanner();
   }
 
 
-
-  /*
-    SHOW SCAN-AGAIN BUTTON
-  */
 
   function showScanAgainButton() {
 
@@ -535,23 +582,66 @@
 
 
 
-  /*
-    SEND ATTENDANCE TO APPS SCRIPT
-  */
+  // ==================================================
+  // SEND ATTENDANCE
+  // ==================================================
 
   function sendAttendance(
     username,
     sessionId
   ) {
 
-
     var callbackName =
       "attendanceCallback" +
       new Date().getTime();
 
 
-    var deviceId =
-      getDeviceId();
+    var requestScript =
+      document.createElement(
+        "script"
+      );
+
+
+    /*
+      Prevent a browser from reporting an error
+      after the callback has already succeeded.
+    */
+
+    var requestFinished =
+      false;
+
+
+    var timeoutId =
+      setTimeout(
+        function() {
+
+          if (
+            requestFinished
+          ) {
+
+            return;
+          }
+
+
+          requestFinished =
+            true;
+
+
+          document
+            .getElementById("result")
+            .innerText =
+            "Unable to confirm attendance.\n\nPlease try once more or ask the instructor.";
+
+
+          showScanAgainButton();
+
+
+          cleanupRequest();
+
+        },
+
+        15000
+      );
 
 
 
@@ -559,13 +649,35 @@
       function(result) {
 
 
-        if (result.success) {
+        if (
+          requestFinished
+        ) {
+
+          return;
+        }
+
+
+        requestFinished =
+          true;
+
+
+        clearTimeout(
+          timeoutId
+        );
+
+
+        // --------------------------------------
+        // SUCCESS
+        // --------------------------------------
+
+        if (
+          result.success
+        ) {
 
 
           if (
             result.action === "IN"
           ) {
-
 
             document
               .getElementById("result")
@@ -577,11 +689,12 @@
               "\n" +
               result.section;
 
+          }
 
-          } else if (
+
+          else if (
             result.action === "OUT"
           ) {
-
 
             document
               .getElementById("result")
@@ -593,9 +706,10 @@
               "\n" +
               result.section;
 
+          }
 
-          } else {
 
+          else {
 
             document
               .getElementById("result")
@@ -612,8 +726,11 @@
         }
 
 
-        else {
+        // --------------------------------------
+        // REJECTED / FLAGGED
+        // --------------------------------------
 
+        else {
 
           document
             .getElementById("result")
@@ -624,45 +741,23 @@
         }
 
 
-        /*
-          Whether accepted or rejected,
-          allow another scan without
-          refreshing the browser.
-        */
-
         showScanAgainButton();
 
 
+        /*
+          Do not remove the currently executing
+          JSONP script immediately. Some browsers
+          can interpret that as a failed load.
 
-        delete window[
-          callbackName
-        ];
+          Clean it up shortly afterward instead.
+        */
 
-
-        document.body.removeChild(
-          requestScript
+        setTimeout(
+          cleanupRequest,
+          1000
         );
 
       };
-
-
-
-    var requestScript =
-      document.createElement(
-        "script"
-      );
-
-
-    requestScript.src =
-      SCRIPT_URL +
-      "?username=" +
-      encodeURIComponent(username) +
-      "&sessionId=" +
-      encodeURIComponent(sessionId) +
-      "&deviceId=" +
-      encodeURIComponent(deviceId) +
-      "&callback=" +
-      encodeURIComponent(callbackName);
 
 
 
@@ -670,27 +765,116 @@
       function() {
 
 
+        /*
+          Some browsers may fire an error event
+          after the callback already ran.
+          Ignore it if the request succeeded.
+        */
+
+        if (
+          requestFinished
+        ) {
+
+          return;
+        }
+
+
+        requestFinished =
+          true;
+
+
+        clearTimeout(
+          timeoutId
+        );
+
+
         document
           .getElementById("result")
           .innerText =
-          "Could not contact attendance server.";
+          "Unable to confirm attendance.\n\nPlease try once more or ask the instructor.";
 
 
         showScanAgainButton();
 
+
+        cleanupRequest();
+
       };
 
 
-    document.body.appendChild(
-      requestScript
-    );
+
+    function cleanupRequest() {
+
+      if (
+        requestScript.parentNode
+      ) {
+
+        requestScript.parentNode
+          .removeChild(
+            requestScript
+          );
+      }
+
+
+      try {
+
+        delete window[
+          callbackName
+        ];
+
+      } catch (error) {
+
+        window[
+          callbackName
+        ] =
+        undefined;
+      }
+
+    }
+
+
+
+    requestScript.src =
+      SCRIPT_URL +
+
+      "?username=" +
+      encodeURIComponent(
+        username
+      ) +
+
+      "&sessionId=" +
+      encodeURIComponent(
+        sessionId
+      ) +
+
+      "&deviceId=" +
+      encodeURIComponent(
+        getDeviceId()
+      ) +
+
+      "&userAgent=" +
+      encodeURIComponent(
+        navigator.userAgent
+      ) +
+
+      "&callback=" +
+      encodeURIComponent(
+        callbackName
+      );
+
+
+    document.body
+      .appendChild(
+        requestScript
+      );
+
   }
 
 
 
-  /*
-    PAGE STARTUP
-  */
+  // ==================================================
+  // PAGE STARTUP
+  // ==================================================
 
   loadSavedUsername();
 
